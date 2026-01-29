@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>About This Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 50px; line-height: 1.6; }
+        .back-link { display: block; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link">← Back Home</a>
+    <h1>About This Server</h1>
+    <p>This server is running on <strong>Render</strong> using:</p>
+    <ul>
+        <li>FastAPI (Backend)</li>
+        <li>Jinja2 (Templates)</li>
+        <li>Gunicorn (Production Server)</li>
+    </ul>
+    <p>Current Server Time: {{ server_time }}</p>
+</body>
+</html>
