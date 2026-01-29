@@ -1,4 +1,9 @@
-fastapi
-uvicorn
+flask
+flask-sqlalchemy
+flask-cors
+flask-socketio
+eventlet  
+google-generativeai
+psycopg2-binary
+python-dotenv
 gunicorn
-jinja2
