@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <title>Render Complex Test</title>
+</head>
+<body>
+    <nav style="padding: 20px;">
+        <a href="/" style="color: white; margin-right: 20px;">Home</a>
+        <a href="/dashboard" style="color: white;">Dashboard</a>
+    </nav>
+    
+    {% block content %}{% endblock %}
+</body>
+</html>
