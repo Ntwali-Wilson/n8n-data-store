@@ -1,25 +1,26 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import os
-from datetime import datetime
 
 app = FastAPI()
 
-# Tell FastAPI to look in the "templates" folder
+# Mount the static folder so we can load the CSS/Animations
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
-async def serve_home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def home(request: Request):
+    # Passing dynamic data to the home page
+    features = ["Auto-Deploy", "SSL Certificates", "Free Tier Hosting"]
+    return templates.TemplateResponse("index.html", {"request": request, "features": features})
 
-@app.get("/about", response_class=HTMLResponse)
-async def serve_about(request: Request):
-    # We can pass variables (like time) to the HTML template
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return templates.TemplateResponse("about.html", {"request": request, "server_time": now})
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    stats = {"uptime": "99.9%", "server": "Render Frankfurt", "latency": "24ms"}
+    return templates.TemplateResponse("dashboard.html", {"request": request, "stats": stats})
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=port)
+@app.get("/api/health")
+def health_check():
+    return {"status": "healthy"}
