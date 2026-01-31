@@ -67,6 +67,14 @@ class Lesson(db.Model):
     duration = db.Column(db.String(20)) # e.g., "15:30"
     position = db.Column(db.Integer) # Order: 1, 2, 3
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+
+# --- NEW MODEL: Chat History ---
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    role = db.Column(db.String(10), nullable=False) # 'user' or 'model'
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 # --- HELPER FUNCTIONS ---
 def calculate_gpa(user_id):
     grades = Grade.query.filter_by(student_id=user_id).all()
@@ -289,34 +297,76 @@ model = genai.GenerativeModel('gemini-pro')
 def school_profile():
     return render_template('school_profile.html')
 
-# --- AI CHAT ROUTE ---
+# --- SMART AI CHAT ROUTE ---
 @app.route('/api/chat', methods=['POST'])
 def chat_with_tutor():
     if 'user_id' not in session:
         return jsonify({"error": "Unauthorized"}), 401
     
     data = request.json
-    user_message = data.get('message')
+    user_text = data.get('message')
+    user_id = session['user_id']
+
+    # 1. Save User Message to DB
+    new_msg = ChatMessage(user_id=user_id, role='user', content=user_text)
+    db.session.add(new_msg)
+    db.session.commit()
     
-    # Context: Tell the AI who it is
-    system_prompt = """
-    You are the IsomoLink AI Tutor. Your goal is to help Rwandan students master 
-    subjects like Math, Physics, and Trading. Keep answers concise, encouraging, 
-    and easy to understand. If asked about prices, use RWF (Rwandan Francs).
-    """
+    # 2. Fetch Recent History (Last 10 messages) to give context
+    # We order by ID desc to get newest, then reverse back to chronological order
+    recent_history = ChatMessage.query.filter_by(user_id=user_id)\
+        .order_by(ChatMessage.id.desc()).limit(10).all()
+    recent_history.reverse()
+
+    # 3. Build Prompt for Gemini
+    chat_session = model.start_chat(history=[])
     
+    # Pre-load the history into Gemini object
+    history_payload = []
+    for msg in recent_history:
+        # Map our DB roles to Gemini roles ('user' -> 'user', 'model' -> 'model')
+        history_payload.append({
+            "role": "user" if msg.role == 'user' else "model",
+            "parts": [msg.content]
+        })
+
+    # System instruction (Gemini Pro treats this as the first prompt often, or we wrap it)
+    system_instruction = "You are the IsomoLink AI Tutor. Keep answers concise and helpful."
+
     try:
-        # Generate Response
-        full_prompt = f"{system_prompt}\n\nStudent: {user_message}\nTutor:"
-        response = model.generate_content(full_prompt)
+        # Create a chat object with history
+        chat = model.start_chat(history=history_payload)
         
-        # Convert Markdown to HTML (so bolding/lists look good)
-        html_response = markdown.markdown(response.text)
+        # Send the new message
+        response = chat.send_message(user_text + f"\n\n(System Note: {system_instruction})")
+        ai_text = response.text
         
+        # 4. Save AI Response to DB
+        ai_msg = ChatMessage(user_id=user_id, role='model', content=ai_text)
+        db.session.add(ai_msg)
+        db.session.commit()
+        
+        # Convert to HTML for display
+        html_response = markdown.markdown(ai_text)
         return jsonify({"response": html_response})
         
     except Exception as e:
-        return jsonify({"response": "I'm having trouble connecting to the brain right now. Try again!"})
+        print(f"AI Error: {e}")
+        return jsonify({"response": "I'm having trouble connecting to the brain right now."})
+
+# --- NEW ROUTE: LOAD HISTORY ---
+@app.route('/api/chat/history', methods=['GET'])
+def get_chat_history():
+    if 'user_id' not in session: return jsonify([])
+    
+    # Get last 20 messages
+    history = ChatMessage.query.filter_by(user_id=session['user_id'])\
+        .order_by(ChatMessage.id.asc()).limit(20).all()
+    
+    return jsonify([{
+        "role": msg.role,
+        "content": markdown.markdown(msg.content) # Pre-format markdown for frontend
+    } for msg in history])
 
 # --- DB INIT (Run Once) ---
 @app.route('/init-db')
