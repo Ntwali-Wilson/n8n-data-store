@@ -4,6 +4,8 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import google.generativeai as genai
+import markdown # To format the AI's response nicely
 
 app = Flask(__name__)
 
@@ -276,10 +278,45 @@ def search():
     ).limit(10).all()
     
     return render_template('search_results.html', query=query, courses=courses, people=people)
+# --- AI CONFIGURATION ---
+# Replace 'YOUR_API_KEY' with your actual key from Google AI Studio
+os.environ["GEMINI_API_KEY"] = "AIzaSyA_-UfBzXP1R957RjgKnX4tmJLHJsHldOUE" 
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
+# Set up the model
+model = genai.GenerativeModel('gemini-pro')
 @app.route('/school/green-hills')
 def school_profile():
     return render_template('school_profile.html')
+
+# --- AI CHAT ROUTE ---
+@app.route('/api/chat', methods=['POST'])
+def chat_with_tutor():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    user_message = data.get('message')
+    
+    # Context: Tell the AI who it is
+    system_prompt = """
+    You are the IsomoLink AI Tutor. Your goal is to help Rwandan students master 
+    subjects like Math, Physics, and Trading. Keep answers concise, encouraging, 
+    and easy to understand. If asked about prices, use RWF (Rwandan Francs).
+    """
+    
+    try:
+        # Generate Response
+        full_prompt = f"{system_prompt}\n\nStudent: {user_message}\nTutor:"
+        response = model.generate_content(full_prompt)
+        
+        # Convert Markdown to HTML (so bolding/lists look good)
+        html_response = markdown.markdown(response.text)
+        
+        return jsonify({"response": html_response})
+        
+    except Exception as e:
+        return jsonify({"response": "I'm having trouble connecting to the brain right now. Try again!"})
 
 # --- DB INIT (Run Once) ---
 @app.route('/init-db')
