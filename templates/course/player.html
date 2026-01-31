@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.title }} | IsomoLink{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row h-[calc(100vh-80px)] overflow-hidden">
+    
+    <div class="flex-1 bg-black flex flex-col">
+        <div class="relative w-full h-full flex items-center justify-center bg-gray-900">
+            {% if current_lesson %}
+                <iframe src="{{ current_lesson.video_url }}" 
+                        class="w-full h-full absolute inset-0" 
+                        frameborder="0" allowfullscreen>
+                </iframe>
+            {% else %}
+                <div class="text-white text-center">
+                    <p class="text-2xl font-bold">No Content Available</p>
+                    <p class="text-gray-400">This course has no lessons yet.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="bg-gray-800 text-white p-4 flex justify-between items-center">
+            <div>
+                <h2 class="text-xl font-bold">{{ current_lesson.title }}</h2>
+                <p class="text-sm text-gray-400">Lesson {{ current_lesson.position }} of {{ course.lessons|length }}</p>
+            </div>
+            <button class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2 rounded-lg font-bold">
+                Next Lesson →
+            </button>
+        </div>
+    </div>
+
+    <div class="w-full lg:w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="font-bold text-lg text-gray-900 dark:text-white">{{ course.title }}</h3>
+            <div class="flex items-center mt-2 text-sm text-gray-500">
+                <div class="w-full bg-gray-200 rounded-full h-1.5 mr-2">
+                    <div class="bg-green-500 h-1.5 rounded-full" style="width: 30%"></div>
+                </div>
+                <span>30% Complete</span>
+            </div>
+        </div>
+
+        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for lesson in course.lessons %}
+            <a href="/course/{{ course.id }}/lesson/{{ lesson.id }}" 
+               class="flex items-start p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition group
+                      {% if lesson.id == current_lesson.id %}bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-600{% endif %}">
+                
+                <div class="mt-1 mr-3 text-gray-400 group-hover:text-blue-500">
+                    {% if lesson.id == current_lesson.id %}
+                        ▶
+                    {% else %}
+                        {{ lesson.position }}
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 transition">
+                        {{ lesson.title }}
+                    </h4>
+                    <span class="text-xs text-gray-500 flex items-center mt-1">
+                        📺 {{ lesson.duration }}
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
