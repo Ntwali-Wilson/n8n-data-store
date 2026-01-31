@@ -221,6 +221,19 @@ def create_dummy_course():
     
     return "Dummy Course 'Forex Trading' Created!"
 
+@app.route('/leaderboard')
+def leaderboard_page():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    
+    # Fetch TOP 50 students for the full page
+    leaderboard_data = db.session.query(
+        User.username,
+        User.full_name, # Assuming you added this, or just use username
+        func.avg(Grade.score).label('avg_score')
+    ).join(Grade).filter(User.role == 'student').group_by(User.id).order_by(func.avg(Grade.score).desc()).limit(50).all()
+    
+    return render_template('leaderboard.html', leaderboard=leaderboard_data)
+
 # --- DB INIT (Run Once) ---
 @app.route('/init-db')
 def init_db():
