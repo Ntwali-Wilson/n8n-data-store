@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold">Hello, @{{ user.username }} 👋</h1>
+            <p class="text-gray-500">
+                Role: <span class="capitalize font-semibold text-blue-600">{{ role }}</span>
+            </p>
+        </div>
+    </div>
+
+    {% if role == 'student' %}
+        {% include "components/dashboard_student.html" %}
+    {% elif role == 'teacher' %}
+        {% include "components/dashboard_teacher.html" %}
+    {% endif %}
+
+</div>
+{% endblock %}
