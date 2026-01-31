@@ -244,14 +244,14 @@ def create_dummy_course():
 def leaderboard_page():
     if 'user_id' not in session: return redirect(url_for('login'))
     
-    # Fetch TOP 50 students for the full page
+    # FETCH TOP 50 STUDENTS
+    # We removed User.full_name to fix the error
     leaderboard_data = db.session.query(
         User.username,
-        User.full_name, # Assuming you added this, or just use username
         func.avg(Grade.score).label('avg_score')
     ).join(Grade).filter(User.role == 'student').group_by(User.id).order_by(func.avg(Grade.score).desc()).limit(50).all()
     
-    return render_template('leaderboard.html', leaderboard=leaderboard_data)
+    return render_template('leaderboard.html', leaderboard=leaderboard_data))
 
 # --- SEARCH ROUTE ---
 @app.route('/search')
