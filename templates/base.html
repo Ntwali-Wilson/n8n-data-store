@@ -41,6 +41,120 @@
     <main class="flex-1 overflow-y-auto p-8">
         {% block content %}{% endblock %}
     </main>
+<div id="ai-chat-widget" class="fixed bottom-6 right-6 z-50 hidden flex-col items-end">
+    
+    <div class="bg-white dark:bg-gray-800 w-80 md:w-96 h-[500px] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden mb-4 transition-all transform scale-95 opacity-0" id="chat-window">
+        
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white flex justify-between items-center">
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mr-2">🤖</div>
+                <div>
+                    <h3 class="font-bold text-sm">Gemini Tutor</h3>
+                    <p class="text-[10px] text-indigo-100">Always online</p>
+                </div>
+            </div>
+            <button onclick="toggleChat()" class="text-white hover:bg-white/20 rounded-full p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50 dark:bg-gray-900/50">
+            <div class="flex items-start">
+                <div class="bg-white dark:bg-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm text-sm text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700 max-w-[85%]">
+                    Hello! I'm your AI study partner. Ask me to explain a concept, solve a math problem, or summarize your lesson! 
+                </div>
+            </div>
+        </div>
+
+        <div class="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+            <form id="chat-form" class="flex gap-2" onsubmit="sendMessage(event)">
+                <input type="text" id="chat-input" placeholder="Ask a question..." 
+                       class="flex-1 bg-gray-100 dark:bg-gray-700 text-sm px-4 py-2 rounded-full outline-none focus:ring-2 focus:ring-indigo-500">
+                <button type="submit" class="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition">
+                    <svg class="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <button onclick="toggleChat()" id="chat-launcher" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg transition transform hover:scale-110 flex items-center justify-center">
+        <span class="text-2xl">💬</span>
+    </button>
+</div>
+
+<script>
+    function toggleChat() {
+        const widget = document.getElementById('chat-window');
+        const launcher = document.getElementById('chat-launcher');
+        const container = document.getElementById('ai-chat-widget');
+        
+        container.classList.remove('hidden'); // Ensure container is visible
+        container.classList.add('flex');
+
+        if (widget.classList.contains('opacity-0')) {
+            // OPEN
+            widget.classList.remove('opacity-0', 'scale-95', 'hidden');
+            launcher.classList.add('hidden');
+        } else {
+            // CLOSE
+            widget.classList.add('opacity-0', 'scale-95', 'hidden');
+            launcher.classList.remove('hidden');
+        }
+    }
+
+    async function sendMessage(e) {
+        e.preventDefault();
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+        const messagesDiv = document.getElementById('chat-messages');
+
+        if (!message) return;
+
+        // 1. Add User Message
+        messagesDiv.innerHTML += `
+            <div class="flex items-center justify-end">
+                <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-md text-sm max-w-[85%]">
+                    ${message}
+                </div>
+            </div>`;
+        
+        input.value = '';
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        // 2. Add Loading Indicator
+        const loadingId = 'loading-' + Date.now();
+        messagesDiv.innerHTML += `
+            <div id="${loadingId}" class="flex items-start">
+                <div class="bg-white dark:bg-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm text-sm text-gray-400 border border-gray-100 dark:border-gray-700">
+                    Thinking...
+                </div>
+            </div>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        // 3. Send to Backend
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            const data = await response.json();
+
+            // 4. Replace Loading with AI Response
+            document.getElementById(loadingId).remove();
+            messagesDiv.innerHTML += `
+                <div class="flex items-start">
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm text-sm text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700 max-w-[85%] prose prose-sm dark:prose-invert">
+                        ${data.response}
+                    </div>
+                </div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+</script>
 
 </body>
 </html>
