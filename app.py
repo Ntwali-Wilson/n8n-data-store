@@ -1,56 +1,53 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
-# --- CONFIGURATION ---
 app = Flask(__name__)
-app.secret_key = "IsomoLink_Secret_Key_2026" # Change this in production
-# This grabs the internal database URL from Render automatically
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Security: Ensure secret key is pulled from environment
-app.secret_key = os.environ.get('SECRET_KEY', 'fallback_secret_for_dev') 
+# --- CONFIGURATION ---
+# Database Connection
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = os.environ.get('SECRET_KEY', 'IsomoLink_Fallback_Key') # vital for sessions
 
 db = SQLAlchemy(app)
 
-# --- DATABASE MODELS ---
-
+# --- MODELS (The Database Structure) ---
 class User(db.Model):
+    __tablename__ = 'users' # Explicit table name
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False) # Plain text for MVP demo only
-    role = db.Column(db.String(20), nullable=False) # 'student', 'teacher'
-    full_name = db.Column(db.String(100))
+    username = db.Column(db.String(50), unique=True, nullable=False) # The Handle
+    email = db.Column(db.String(120), unique=True, nullable=False)   # NEW: Real Email
+    password_hash = db.Column(db.String(255), nullable=False)        # NEW: Secure Hash
+    role = db.Column(db.String(20), default='student') # student, teacher, school
     
     # Relationships
     grades = db.relationship('Grade', backref='student', lazy=True)
+    
+    # Security Helpers
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+        
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 class Grade(db.Model):
+    __tablename__ = 'grades'
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    subject = db.Column(db.String(50), nullable=False) # e.g., "Mathematics"
-    score = db.Column(db.Float, nullable=False) # e.g., 85.5
-    weight = db.Column(db.Float, default=1.0) # 1.0 = Exam, 0.5 = Quiz
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    subject = db.Column(db.String(50), nullable=False)
+    score = db.Column(db.Float, nullable=False)
+    weight = db.Column(db.Float, default=1.0)
 
 # --- HELPER FUNCTIONS ---
-
 def calculate_gpa(user_id):
-    """
-    Calculates the weighted average grade dynamically from the database.
-    This is NOT a fixed number; it runs every time the dashboard loads.
-    """
     grades = Grade.query.filter_by(student_id=user_id).all()
-    if not grades:
-        return 0.0
-    
+    if not grades: return 0.0
     total_score = sum(g.score * g.weight for g in grades)
     total_weight = sum(g.weight for g in grades)
-    
     if total_weight == 0: return 0.0
-    
     return round(total_score / total_weight, 1)
 
 # --- ROUTES ---
@@ -61,77 +58,86 @@ def home():
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
+# 1. REAL REGISTRATION (New Feature)
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        # Get and clean data
+        username = request.form['username'].lower().strip()
+        email = request.form['email'].lower().strip()
+        password = request.form['password']
+        role = request.form['role']
+        
+        # Check if user exists
+        if User.query.filter((User.username == username) | (User.email == email)).first():
+            flash('Error: Username or Email is already taken!', 'danger')
+            return redirect(url_for('register'))
+        
+        # Create and Save
+        new_user = User(username=username, email=email, role=role)
+        new_user.set_password(password) # Encrypts the password
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        flash('Account created! Please login.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('auth/register.html')
+
+# 2. REAL LOGIN (Updated Security)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        # In a real app, hash passwords!
+        username = request.form['username'].lower().strip()
+        password = request.form['password']
+        
         user = User.query.filter_by(username=username).first()
         
-        if user: # Simplified login for demo
+        # Verify Password Hash
+        if user and user.check_password(password):
             session['user_id'] = user.id
-            session['role'] = user.role
             session['username'] = user.username
+            session['role'] = user.role
             return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid username or password.', 'danger')
             
-    return render_template('login.html')
+    return render_template('auth/login.html')
 
+# 3. REAL DASHBOARD
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    user_id = session['user_id']
-    user = User.query.get(user_id)
+    current_user = User.query.get(session['user_id'])
     
-    # DYNAMIC DATA PACKAGING
+    # Pack data for the template
     context = {
-        "user": user,
-        "role": user.role
+        "user": current_user,
+        "role": current_user.role
     }
     
-    if user.role == 'student':
-        # Calculate grades in real-time
-        context['gpa'] = calculate_gpa(user_id)
-        context['grades'] = Grade.query.filter_by(student_id=user_id).all()
-        
-    elif user.role == 'teacher':
-        # Fetch analytics
+    if current_user.role == 'student':
+        context['gpa'] = calculate_gpa(current_user.id)
+        context['grades'] = Grade.query.filter_by(student_id=current_user.id).all()
+    elif current_user.role == 'teacher':
         context['total_students'] = User.query.filter_by(role='student').count()
-        context['revenue'] = 45000 # Dummy revenue for now
-
+    
     return render_template('dashboard.html', **context)
 
 @app.route('/logout')
 def logout():
     session.clear()
+    flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-# --- SETUP SCRIPT ---
-# Run this once to create dummy data
-@app.route('/setup')
-def setup():
+# --- DB INIT (Run Once) ---
+@app.route('/init-db')
+def init_db():
     db.create_all()
-    
-    # Create Dummy Student
-    if not User.query.filter_by(username='student1').first():
-        s1 = User(username='student1', password='123', role='student', full_name='Jane Doe')
-        db.session.add(s1)
-        db.session.commit()
-        
-        # Add Grades for calculation
-        db.session.add(Grade(student_id=s1.id, subject='Math', score=85, weight=1.0))
-        db.session.add(Grade(student_id=s1.id, subject='Physics', score=72, weight=1.0))
-        db.session.add(Grade(student_id=s1.id, subject='Quiz 1', score=90, weight=0.5))
-        db.session.commit()
-
-    # Create Dummy Teacher
-    if not User.query.filter_by(username='teacher1').first():
-        t1 = User(username='teacher1', password='123', role='teacher', full_name='Mr. John')
-        db.session.add(t1)
-        db.session.commit()
-
-    return "Database Created & Dummy Data Added!"
+    return "Database Tables Re-Created Successfully!"
 
 if __name__ == '__main__':
     app.run(debug=True)
