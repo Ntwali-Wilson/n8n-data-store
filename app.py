@@ -41,7 +41,30 @@ class Grade(db.Model):
     subject = db.Column(db.String(50), nullable=False)
     score = db.Column(db.Float, nullable=False)
     weight = db.Column(db.Float, default=1.0)
+# --- NEW MODELS (Paste this below the User class) ---
 
+class Course(db.Model):
+    __tablename__ = 'courses'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    price = db.Column(db.Float, default=0.0) # Price in RWF
+    thumbnail_url = db.Column(db.String(255)) # Image for the dashboard card
+    teacher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Relationships
+    lessons = db.relationship('Lesson', backref='course', lazy=True)
+    # Make sure 'User' can access their courses
+    teacher = db.relationship('User', backref=db.backref('courses_taught', lazy=True))
+
+class Lesson(db.Model):
+    __tablename__ = 'lessons'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    video_url = db.Column(db.String(255), nullable=False) # YouTube/Vimeo/Supabase Link
+    duration = db.Column(db.String(20)) # e.g., "15:30"
+    position = db.Column(db.Integer) # Order: 1, 2, 3
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
 # --- HELPER FUNCTIONS ---
 def calculate_gpa(user_id):
     grades = Grade.query.filter_by(student_id=user_id).all()
@@ -145,6 +168,58 @@ def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
+# --- COURSE ROUTES ---
+
+# 1. Course Overview / Player
+@app.route('/course/<int:course_id>')
+def view_course(course_id):
+    if 'user_id' not in session: return redirect(url_for('login'))
+    
+    course = Course.query.get_or_404(course_id)
+    # Default to the first lesson if none selected
+    current_lesson = course.lessons[0] if course.lessons else None
+    
+    return render_template('course/player.html', course=course, current_lesson=current_lesson)
+
+# 2. Watch Specific Lesson
+@app.route('/course/<int:course_id>/lesson/<int:lesson_id>')
+def watch_lesson(course_id, lesson_id):
+    if 'user_id' not in session: return redirect(url_for('login'))
+    
+    course = Course.query.get_or_404(course_id)
+    current_lesson = Lesson.query.get_or_404(lesson_id)
+    
+    return render_template('course/player.html', course=course, current_lesson=current_lesson)
+
+# 3. Create Dummy Course (Run this once via URL to test)
+@app.route('/create-dummy-course')
+def create_dummy_course():
+    # Ensure Teacher Exists
+    teacher = User.query.filter_by(role='teacher').first()
+    if not teacher: return "Create a teacher account first!"
+
+    # Create the Course (Bundle)
+    forex_course = Course(
+        title="Intro to Forex Trading",
+        description="Master the currency markets. Learn leverage, pips, and risk management.",
+        price=5000.0,
+        teacher_id=teacher.id,
+        thumbnail_url="https://images.unsplash.com/photo-1611974765270-ca1258634369?auto=format&fit=crop&w=500&q=60"
+    )
+    db.session.add(forex_course)
+    db.session.commit()
+
+    # Add Lessons
+    lessons = [
+        Lesson(title="What is Forex?", video_url="https://www.youtube.com/embed/f432H32", duration="10:00", position=1, course=forex_course),
+        Lesson(title="Reading Candlesticks", video_url="https://www.youtube.com/embed/d3213", duration="15:30", position=2, course=forex_course),
+        Lesson(title="Risk Management Strategy", video_url="https://www.youtube.com/embed/g5435", duration="20:00", position=3, course=forex_course)
+    ]
+    db.session.add_all(lessons)
+    db.session.commit()
+    
+    return "Dummy Course 'Forex Trading' Created!"
 
 # --- DB INIT (Run Once) ---
 @app.route('/init-db')
