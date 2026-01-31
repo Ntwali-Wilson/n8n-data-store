@@ -1,4 +1,5 @@
 import os
+from sqlalchemy.sql import func
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -105,7 +106,6 @@ def login():
             
     return render_template('auth/login.html')
 
-# 3. REAL DASHBOARD
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
@@ -113,17 +113,30 @@ def dashboard():
     
     current_user = User.query.get(session['user_id'])
     
-    # Pack data for the template
     context = {
         "user": current_user,
         "role": current_user.role
     }
     
     if current_user.role == 'student':
+        # 1. Calculate MY GPA
         context['gpa'] = calculate_gpa(current_user.id)
+        
+        # 2. Get MY Grades
         context['grades'] = Grade.query.filter_by(student_id=current_user.id).all()
+        
+        # 3. NEW FEATURE: The Leaderboard Query
+        # This fetches the Top 5 Students by Average Score
+        leaderboard_data = db.session.query(
+            User.username,
+            func.avg(Grade.score).label('avg_score')
+        ).join(Grade).filter(User.role == 'student').group_by(User.id).order_by(func.avg(Grade.score).desc()).limit(5).all()
+        
+        context['leaderboard'] = leaderboard_data
+
     elif current_user.role == 'teacher':
         context['total_students'] = User.query.filter_by(role='student').count()
+        # You can add a "Top Selling Teachers" leaderboard here later
     
     return render_template('dashboard.html', **context)
 
