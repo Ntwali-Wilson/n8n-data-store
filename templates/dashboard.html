@@ -32,9 +32,13 @@
                         <span class="mr-2">📹</span> Upload Lesson
                     </a>
                 {% else %}
-                     <a href="#" class="bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 px-6 py-3 rounded-xl font-bold shadow-lg transition">
-                        Find a Tutor 🔍
-                    </a>
+<form action="/search" method="GET" class="relative hidden md:block w-96">
+    <span class="absolute left-3 top-2.5 text-gray-400">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    </span>
+    <input type="text" name="q" placeholder="Search courses, teachers, students..." 
+           class="w-full bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white pl-10 pr-4 py-2 rounded-xl border-none ring-1 ring-gray-200 dark:ring-gray-600 focus:ring-2 focus:ring-blue-500 outline-none transition placeholder-gray-400">
+</form>
                 {% endif %}
             </div>
         </div>
