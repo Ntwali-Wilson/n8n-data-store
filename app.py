@@ -261,7 +261,7 @@ def leaderboard_page():
         func.avg(Grade.score).label('avg_score')
     ).join(Grade).filter(User.role == 'student').group_by(User.id).order_by(func.avg(Grade.score).desc()).limit(50).all()
     
-    return render_template('leaderboard.html', leaderboard=leaderboard_data))
+    return render_template('leaderboard.html', leaderboard=leaderboard_data)
 
 # --- SEARCH ROUTE ---
 @app.route('/search')
