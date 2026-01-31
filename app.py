@@ -148,18 +148,37 @@ def dashboard():
         # 2. Get MY Grades
         context['grades'] = Grade.query.filter_by(student_id=current_user.id).all()
         
-        # 3. NEW FEATURE: The Leaderboard Query
-        # This fetches the Top 5 Students by Average Score
-        leaderboard_data = db.session.query(
+        # 3. Base Leaderboard Query (Group by User, Order by Avg Score)
+        # We define the query once so we can use it twice
+        leaderboard_query = db.session.query(
             User.username,
+            User.id,
             func.avg(Grade.score).label('avg_score')
-        ).join(Grade).filter(User.role == 'student').group_by(User.id).order_by(func.avg(Grade.score).desc()).limit(5).all()
+        ).join(Grade).filter(User.role == 'student').group_by(User.id).order_by(func.avg(Grade.score).desc())
         
-        context['leaderboard'] = leaderboard_data
+        # A. Fetch Top 5 for the Widget
+        context['leaderboard'] = leaderboard_query.limit(5).all()
+
+        # B. Calculate MY RANK (The Logic Fix)
+        # We need the full list to find where YOU stand
+        all_ranked_students = leaderboard_query.all()
+        
+        my_rank = 0
+        # Loop through everyone to find my position
+        for index, student in enumerate(all_ranked_students):
+            if student.id == current_user.id:
+                my_rank = index + 1 # Rank is index + 1 (because index starts at 0)
+                break
+        
+        # If I have no grades yet, I am unranked
+        if my_rank == 0:
+            my_rank = "--"
+            
+        context['my_rank'] = my_rank
 
     elif current_user.role == 'teacher':
         context['total_students'] = User.query.filter_by(role='student').count()
-        # You can add a "Top Selling Teachers" leaderboard here later
+        # You can add revenue logic here later
     
     return render_template('dashboard.html', **context)
 
@@ -233,6 +252,30 @@ def leaderboard_page():
     ).join(Grade).filter(User.role == 'student').group_by(User.id).order_by(func.avg(Grade.score).desc()).limit(50).all()
     
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
+
+# --- SEARCH ROUTE ---
+@app.route('/search')
+def search():
+    query = request.args.get('q', '').strip()
+    
+    # If search is empty, go back
+    if not query:
+        return redirect(url_for('dashboard'))
+    
+    # 1. Search Courses (Title or Description)
+    # ilike makes it case-insensitive (e.g., "forex" matches "Forex")
+    courses = Course.query.filter(
+        (Course.title.ilike(f'%{query}%')) | 
+        (Course.description.ilike(f'%{query}%'))
+    ).all()
+    
+    # 2. Search People (Students & Teachers)
+    people = User.query.filter(
+        (User.username.ilike(f'%{query}%')) |
+        (User.full_name.ilike(f'%{query}%')) # Only if you added full_name column
+    ).limit(10).all()
+    
+    return render_template('search_results.html', query=query, courses=courses, people=people)
 
 @app.route('/school/green-hills')
 def school_profile():
