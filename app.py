@@ -6,8 +6,12 @@ from datetime import datetime
 # --- CONFIGURATION ---
 app = Flask(__name__)
 app.secret_key = "IsomoLink_Secret_Key_2026" # Change this in production
-# Use SQLite for local testing, PostgreSQL for Render
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///isomolink.db' 
+# This grabs the internal database URL from Render automatically
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Security: Ensure secret key is pulled from environment
+app.secret_key = os.environ.get('SECRET_KEY', 'fallback_secret_for_dev') 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
