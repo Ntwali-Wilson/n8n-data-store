@@ -1,19 +1,99 @@
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div class="text-gray-500">Total Students</div>
-        <div class="text-4xl font-bold text-gray-800">{{ total_students }}</div>
+    <div class="lg:col-span-2 space-y-6">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <div class="bg-gradient-to-br from-green-600 to-emerald-700 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
+                <div class="absolute right-0 top-0 opacity-10 transform translate-x-2 -translate-y-2">
+                    <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
+                </div>
+                
+                <p class="text-green-100 text-sm font-bold uppercase tracking-wider">Total Earnings</p>
+                <div class="flex items-baseline mt-2">
+                    <h2 class="text-4xl font-extrabold">{{ "{:,.0f}".format(revenue|default(0)) }}</h2>
+                    <span class="ml-2 text-lg opacity-80">RWF</span>
+                </div>
+                
+                <div class="mt-6 flex items-center text-xs font-medium bg-green-800/30 w-max px-2 py-1 rounded">
+                    <span class="text-green-300 mr-1">↗ +12%</span> vs last month
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-bold uppercase tracking-wider">Active Students</p>
+                    <h2 class="text-4xl font-extrabold text-gray-900 dark:text-white mt-2">{{ total_students }}</h2>
+                </div>
+                <div class="mt-4">
+                    <p class="text-xs text-gray-400">Total enrollments across all your units.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="font-bold text-lg text-gray-900 dark:text-white">Recent Transactions</h3>
+                <button class="text-sm text-blue-600 font-medium hover:underline">View All</button>
+            </div>
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 text-xs uppercase">
+                    <tr>
+                        <th class="px-6 py-3">Student</th>
+                        <th class="px-6 py-3">Item Purchased</th>
+                        <th class="px-6 py-3">Amount</th>
+                        <th class="px-6 py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                        <td class="px-6 py-4 font-medium flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3">S</div>
+                            @sarah_k
+                        </td>
+                        <td class="px-6 py-4 text-gray-600 dark:text-gray-300">Physics: Motion Unit</td>
+                        <td class="px-6 py-4 font-bold">500 RWF</td>
+                        <td class="px-6 py-4"><span class="text-green-600 bg-green-50 px-2 py-1 rounded text-xs">Paid</span></td>
+                    </tr>
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                        <td class="px-6 py-4 font-medium flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold mr-3">M</div>
+                            @mike_t
+                        </td>
+                        <td class="px-6 py-4 text-gray-600 dark:text-gray-300">Algebra Basics</td>
+                        <td class="px-6 py-4 font-bold">500 RWF</td>
+                        <td class="px-6 py-4"><span class="text-green-600 bg-green-50 px-2 py-1 rounded text-xs">Paid</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div class="text-gray-500">Wallet Balance</div>
-        <div class="text-4xl font-bold text-green-600">{{ revenue }} RWF</div>
-    </div>
+    <div class="space-y-6">
+        
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+            <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                ☁️
+            </div>
+            <h3 class="font-bold text-lg mb-2">Upload New Content</h3>
+            <p class="text-gray-500 text-sm mb-6">Create a new video lesson, quiz bundle, or virtual tour.</p>
+            <button class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition transform hover:-translate-y-1">
+                + Create Unit
+            </button>
+        </div>
 
-    <div class="col-span-2 mt-4">
-        <button class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold shadow-md hover:bg-blue-700">
-            + Create New Course Bundle
-        </button>
-    </div>
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-2xl border border-yellow-100 dark:border-yellow-900/50">
+            <div class="flex items-start">
+                <span class="text-xl mr-3">📢</span>
+                <div>
+                    <h4 class="font-bold text-yellow-800 dark:text-yellow-500 text-sm">Verification Status</h4>
+                    <p class="text-yellow-700 dark:text-yellow-400 text-xs mt-1">
+                        Your account is currently <strong>Pending Verification</strong>. You can upload content, but payouts are paused until verified.
+                    </p>
+                    <a href="#" class="text-yellow-900 dark:text-yellow-300 text-xs font-bold underline mt-2 block">Complete Profile</a>
+                </div>
+            </div>
+        </div>
 
+    </div>
 </div>
