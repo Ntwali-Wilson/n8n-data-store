@@ -234,6 +234,10 @@ def leaderboard_page():
     
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
 
+@app.route('/school/green-hills')
+def school_profile():
+    return render_template('school_profile.html')
+
 # --- DB INIT (Run Once) ---
 @app.route('/init-db')
 def init_db():
